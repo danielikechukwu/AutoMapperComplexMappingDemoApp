@@ -125,5 +125,37 @@ namespace AutoMapperComplexMappingDemo.Controllers
                 return StatusCode(500, $"An error occurred while fetching data: {ex.Message}");
             }
         }
+
+        // This method is responsible for fetching all orders made by a specific customer, identified by their CustomerId.
+        // It retrieves a list of orders associated with the customer from the database, along with related data
+        // such as the customer, their address, and the products ordered in each order.
+        // The method returns the list of orders in the form of OrderDTO objects.
+        // GET: api/order/customer/{customerId}
+        [HttpGet("customer/{customerId}")]
+        public async Task<ActionResult<IEnumerable<OrderDTO>>> GetOrdersByCustomerId([FromRoute] int customerId)
+        {
+            try
+            {
+                var orders = await _context.Orders
+                    .Where(o => o.CustomerId == customerId)
+                    .Include(o => o.Customer)
+                    .ThenInclude(c => c.Address)
+                    .Include(o => o.OrderItems)
+                    .ThenInclude(oi => oi.Product)
+                    .ToListAsync();
+
+                if (orders == null || orders.Count == 0)
+                    return NotFound($"No order found for customer with ID: {customerId}");
+
+                var ordersDTO = _mapper.Map<IEnumerable<OrderDTO>>(orders);
+
+                return Ok(ordersDTO);
+
+            }
+            catch(Exception ex)
+            {
+                return StatusCode(500, $"An error occurred while fetching orders for customer ID {customerId}: {ex.Message}");
+            }
+        }
     }
 }
